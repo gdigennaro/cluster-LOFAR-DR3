@@ -1,7 +1,8 @@
 # SCRIPT TO CHECK WHETHER A CLUSTER WITH GIVEN (RA,DEC) POSITION IS OBSERVED BY LoTSS
-# 
+# It adds the field ID, separation to the field center, the noise from the rms 6'' map of each field, the mean value, and the expected noise from the Declination to the catalog
+#
 # G. Di Gennaro
-# Sept 2024
+# Jan 2025
 
 import warnings
 warnings.filterwarnings('ignore')
