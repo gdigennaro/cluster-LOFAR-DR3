@@ -14,6 +14,20 @@ import itertools
 from astropy.io import fits
 from astropy.table import Table
 
+def MassPSZ(z, Y500, Om=0.3, OL=0.7):
+  #Eq. A15 in Planck Collaboration, A&A 571, A20 (2014)
+  from astropy.cosmology import FlatLambdaCDM
+  cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+  kpc2Mpc    = 1E-3
+  kpc2arcmin = cosmo.kpc_proper_per_arcmin(z)
+  Y500 *= (kpc2arcmin.value*kpc2Mpc)**2 #in Mpc**2
+  DA   = cosmo.angular_diameter_distance(z).value #in Mpc**2
+  
+  M    = (6E14/0.8) * ( (Om*(1+z)**3 + OL)**(-2./3.) * (DA**2 * Y500/1E-4) * 10**(0.19) )**(1./1.79) 
+  
+  return M
+
+
 def sepn(r1,d1,r2,d2):
   """
   Calculate the separation between 2 sources, RA and Dec must be
@@ -59,36 +73,26 @@ if True:
     dP    = data['separation']
     noise = data['noise']
     try:
-      #Y500  = data['Y5R500']
-      #M     = data['MSZ']
-      #print (data['z'][ids])
-      ids = []
-      ids = np.where((data['MSZ'] != 0.))[0]
-      #M[ids] = MassPSZ(z[ids], Y500[ids]*1E-3)/1e14
-      M     = data['MSZ'][ids]
+      M     = data['MSZ']
     except:
       pass
     try:
-      ids = []
-      ids = np.where((data['M500cC'] != 0.))[0]
-      M = data['M500cC'][ids]
+      M = data['M500cC']
     except:
       pass
     try:
-      ids = []
-      ids = np.where((data['M500'] != 0.))[0]
       M = data['M500']
     except:
       pass  
     
-    newname = np.append(newname, name[ids])
-    newRA   = np.append(newRA, RA[ids])
-    newDEC  = np.append(newDEC, DEC[ids])
-    newz    = np.append(newz, z[ids])
-    newM500 = np.append(newM500, M[ids])
-    newID   = np.append(newID, P_ID[ids])
-    newdist = np.append(newdist, dP[ids])
-    newsig  = np.append(newsig, noise[ids])
+    newname = np.append(newname, name)
+    newRA   = np.append(newRA, RA)
+    newDEC  = np.append(newDEC, DEC)
+    newz    = np.append(newz, z)
+    newM500 = np.append(newM500, M)
+    newID   = np.append(newID, P_ID)
+    newdist = np.append(newdist, dP)
+    newsig  = np.append(newsig, noise)
 
 
   c1 = fits.Column(name='Name', array=newname, format='30A')
@@ -138,14 +142,15 @@ for i in range(1, len(cataloglist)):
   data  = fits.open(cataloglist[i])[1].data
   name  = data['Name']
 
-  ids = np.where( [any(name[j] in alt for alt in altname[0:k]) for j in range(len(name))] )[0]
-  #print (ids)
-  
+  ids = np.where( [any(name[j] in alt for alt in altname[0:k]) for j in range(len(name))] )[0]  
   multline = list(map(int, np.append(multline, ids+k)))
   k+=len(name)
 
-
-#print (multline)
 table = Table.read(allcatalog)
 table.remove_rows(multline)
 table.write(allcatalog.replace("matched","crossmatched"), overwrite=True)
+
+table = Table.read(allcatalog.replace("matched","crossmatched"))
+ids = np.where( table['M500'] > 0 )[0]
+newtable = table[ids]
+newtable.write(allcatalog.replace("matched","crossmatched"), overwrite=True)
