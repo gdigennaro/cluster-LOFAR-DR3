@@ -1,8 +1,7 @@
-# SCRIPT TO CHECK WHETHER A CLUSTER WITH GIVEN (RA,DEC) POSITION IS OBSERVED BY LoTSS
-# It adds the field ID, separation to the field center, the noise from the rms 6'' map of each field, the mean value, and the expected noise from the Declination to the catalog
-#
+# SCRIPT TO CHECK WHETHER A CLUSTER WITH GIVEN (RA,DEC) POSITION IS OBSERVED BY LOTSS
+# 
 # G. Di Gennaro
-# Jan 2025
+# Sept 2024
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -60,8 +59,10 @@ def map_noise(ID, ra, dec, width=1.0):
   if ymin < 0 : ymin = 0
   if ymax < 0 : ymax = 0
 
+  #rms = computerms(highresrms[ymin:ymax,xmin:xmax])
   rms = np.sqrt(np.nanmean(highresrms[0,0,ymin:ymax,xmin:xmax]**2))
-  
+  #print (ID, rms)
+
   return (rms)
 
 def convertDR3status(status):
@@ -87,7 +88,6 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogue, dcoord=2.2):
 
   # LoTSS pointing table
   print (clustercatalogue)
-
   file = open('fieldsdict.pkl','rb')
   data = pickle.load(file)
   ID      = np.array([data[i]['id'] for i in range(len(data))])
@@ -97,7 +97,6 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogue, dcoord=2.2):
   DR3stat = np.array([data[i]['dr3'] for i in range(len(data))])
 
   idy = np.where( (DR3stat == 1) | (DR3stat == 2) )[0] # FINAL DR3 AREA; DR3stat == 1 >> the field will be included ; DR3stat == 2 >> final map; not all in the list because the mosaic is done only when also the neighbour fields are present
-  #idy = np.arange(0,len(RAp)) # ALL POINTINGS
 
   # cluster tables
   data = fits.open(clustercatalogue)[1].data
@@ -115,16 +114,15 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogue, dcoord=2.2):
     matchID, statusID, noiseID, sepdeg = [], [], [], []
     for j in idy:
       if sepn(RA[i]*deg2rad, DEC[i]*deg2rad, RAp[j]*deg2rad, DECp[j]*deg2rad)*rad2deg <= 2.2 :
-        #print (namelist[i])
         matchID   = np.append(matchID, ID[j])
         statusID  = np.append(statusID, convertDR3status(DR3stat[j]))
         sepdeg    = np.append(sepdeg, round(sepn(RA[i]*deg2rad, DEC[i]*deg2rad, RAp[j]*deg2rad, DECp[j]*deg2rad)*rad2deg, 1))
-
         try:
           noiseID   = np.append(noiseID, map_noise(str(ID[j]), RA[i], DEC[i])*1e6 )
         except:
-          #noiseID   = np.append(noiseID, analytical_noise(DEC[i]*deg2rad)*1e6 ) # this needs to go out as soon as all the fields will be in the final mosaic 
           noiseID   = np.append(noiseID, np.nan ) # this needs to go out as soon as all the fields will be in the final mosaic 
+
+        #print (matchID, noiseID)
 
     allmatchID[i]  = ' '.join(map(str,matchID))
     allstatusID[i] = ' '.join(map(str,statusID))
@@ -135,7 +133,6 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogue, dcoord=2.2):
 
   # write the table with the LoTSS pointing
   newclustercatalogue = clustercatalogue.replace('.fits','matched.fits')
-
   table = Table.read(clustercatalogue)
   table['POINTING_ID'] = allmatchID
   table['Status']      = allstatusID
@@ -143,16 +140,17 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogue, dcoord=2.2):
   table['noise_ID']    = allnoiseID
   table['noise']       = noiseavgID
   table['noise_DEC']   = expnoiseID
-
   table.write(newclustercatalogue, overwrite=True)
   
   table = Table.read(newclustercatalogue)
+  table['POINTING_ID'].fill_value = 'N/A'
   try:
-    ids = np.where( (table['noise'] != -1.) & (np.isfinite(table['M500'])) )[0]
+    ids = np.where( (table['z'] != -1.) & (table['noise'] != -1.) & (table['POINTING_ID'].filled() != 'N/A') & (np.isfinite(table['M500'])) )[0]
   except:
-    ids = np.where((table['noise'] != -1.))[0]
+    ids = np.where((table['z'] != -1.) & (table['noise'] != -1.) & (table['POINTING_ID'].filled() != 'N/A') )[0]
   newtable = table[ids]
   newtable.write(newclustercatalogue, overwrite=True)
+  
 
 if True:
   match_LoTSSpointingID_to_catalogue('./cluster_catalogues/ACT-DR5.fits')
