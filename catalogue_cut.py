@@ -1,7 +1,7 @@
-# SCRIPT TO CHECK MAKE A SUBCATALOGUE GIVEN CLUSTER MASS/REDSHIFT/LoTSS NOISE
+# SCRIPT TO CHECK WHETHER A CLUSTER WITH GIVEN (RA,DEC) POSITION IS OBSERVED BY LOTSS
 # 
 # G. Di Gennaro
-# Sept 2024
+# Sept 2025
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -35,46 +35,35 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
   data  = fits.open(clustercatalogue)[1].data
   noise = np.array(data['noise'])
   z     = np.array(data['z'])
-  try:
-    M  = np.array(data['MSZ'])
-  except:
-    pass
-  try:
-    M   = np.array(data['M500cC'])
-  except:
-    pass
-  try:
-    M   = np.array(data['M500'])
-  except:
-    pass  
-    
-  cuts = ''
-  if Mcut: cuts += 'M'
-  if zcut: cuts += 'z'
-  if Ncut: cuts += 's'  
+  M     = np.array(data['M500'])
 
-  if cuts == 'Mzs':
+  cuts = ''
+  if Mcut: cuts += 'M'+str(Mcut)
+  if zcut: cuts += 'z'+str(zcut)
+  if Ncut: cuts += 's'+str(Ncut)
+
+  if cuts == 'M'+str(Mcut)+'z'+str(zcut)+'s'+str(Ncut):
     ids = np.where( (M >= Mcut)  & (M != '') & (z >= zcut) & (noise <= Ncut) )[0] 
-  elif cuts == 'Mz':
+  elif cuts == 'M'+str(Mcut)+'z'+str(zcut):
     ids = np.where( (M >= Mcut)  & (M != '') & (z >= zcut) )[0] 
-  elif cuts == 'zs':
+  elif cuts == 'z'+str(zcut)+'s'+str(Ncut):
     ids = np.where( (z >= zcut) & (noise <= Ncut) )[0]
-  elif cuts == 'M':
+  elif cuts == 'M'+str(Mcut):
     ids = np.where( (M >= Mcut)  & (M != '') )[0]
-  elif cuts == 'z':
+  elif cuts == 'z'+str(zcut):
     ids = np.where( (z >= zcut) )[0] 
-  elif cuts == 's':
+  elif cuts == 's'+str(Ncut):
     ids = np.where( (noise <= Ncut) )[0]
   print (Mcut, Ncut, zcut, len(ids))
 
-  if True:
+  if docut:
     # write the subtable
-    newclustercatalogue = clustercatalogue.replace('matched.fits','matched_'+cuts+'cut.fits')
+    newclustercatalogue = clustercatalogue.replace('matched.fits','matched_'+cuts+'.fits')
     table = Table.read(clustercatalogue)
     newtable = table[ids]
     newtable.write(newclustercatalogue, overwrite=True)
 
-  if False:
+  if doplot:
     # plot cut catalog 
     name = clustercatalogue.split("matched")[0].split('./cluster_catalogues/')[1]
 
@@ -144,13 +133,17 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     plt.close()
     #sys.exit()  
 
-Mcut = 4.0
-Ncut = 100.
+Mcut = 4
+Ncut = 100
 zcut = 0.6
 
-subcatalogues('./cluster_catalogues/ACT-DR5matched.fits', Mcut, Ncut, zcut)
-subcatalogues('./cluster_catalogues/MCXC2matched.fits', Mcut, Ncut, zcut)
-subcatalogues('./cluster_catalogues/PSZ2matched.fits', Mcut=4, Ncut=200, zcut=0.6)
-subcatalogues('./cluster_catalogues/eROSITA-GEmatched.fits', Mcut, Ncut, zcut)
-#subcatalogues('./cluster_catalogues/DESI-WHmatched.fits', Mcut, Ncut, zcut)
+DATADIR = '/iranet/groups/ulu/g.digennaro/LOFAR-DR3/cluster_catalogues/'
+if True:
+  subcatalogues(DATADIR+'ACT-DR5matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=zcut, docut=True, doplot=False) #, Mcut=6, Ncut=None, zcut=zcut) 
+  subcatalogues(DATADIR+'MCXC2matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
+  subcatalogues(DATADIR+'PSZ2matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
+  subcatalogues(DATADIR+'eROSITA-GEmatched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
+  #subcatalogues('./cluster_catalogues/DESI-WHmatched.fits', Mcut, Ncut, zcut, docut=True, doplot=False)
+if False:
+  subcatalogues('./cluster_catalogues/ALLcrossmatched.fits', Mcut=5, Ncut=None, zcut=0.6, docut=True, doplot=False)
 
