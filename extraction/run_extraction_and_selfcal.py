@@ -22,14 +22,15 @@ from astropy.wcs import WCS
 from auxcodes import separator
 
 sys.path.remove('/opt/lofar/ddf-pipeline/utils')
-sys.path.insert(1, "/local/work/g.digennaro/software/extraction-utils/ddf-pipeline/utils")
-sys.path.insert(1, "/local/work/g.digennaro/software/extraction-utils/lotss-hba-survey")
+sys.path.insert(1, "./extractionDR3/ddf-pipeline/utils")
+sys.path.remove('/opt/lofar/lotss-hba-survey')
+sys.path.insert(1, "./extractionDR3/lotss-hba-survey")
 sys.path.remove('/opt/lofar/ddf-pipeline/scripts')
-sys.path.insert(1, "/local/work/g.digennaro/software/extraction-utils/ddf-pipeline/scripts")
+sys.path.insert(1, ".
+/extractionDR3/ddf-pipeline/scripts")
 
-rclone = os.environ['RCLONE_CONFIG_DIR'] = '/local/work/g.digennaro/software/'
+rclone = os.environ['RCLONE_CONFIG_DIR'] = '/iranet/groups/ulu/g.digennaro/software/'
 #print (rclone) ; sys.exit()
-
 from reprocessing_utils import *
 
 """
@@ -57,9 +58,11 @@ parser.add_argument('-i','--clustername', help='cluster name, if you want to ext
 parser.add_argument('--RA', help='cluster RA (in deg)', required=False, type=float)
 parser.add_argument('--DEC', help='cluster DEC (in deg)', required=False, type=float)
 #parser.add_argument('--docatalog', help='set it True if you want to run the script for a catalog of clusters', action='store_true')
+parser.add_argument('--size', help='size of box region (in deg)', default=0.4, required=False, type=float)
 parser.add_argument('-c','--catalog', help='Catalog to use from which extract clusters', required=False, type=str)
 
 args = vars(parser.parse_args())
+
 
 if args['catalog'] and args['clustername']:
   print ("Error: either give a single target name or a cluster catalog")
@@ -83,32 +86,34 @@ else:
 
 for i, cluster in enumerate(clusterlist):
   print (os.getcwd())
-  name = cluster.replace(' ','')
-  print ("CLUSTER:", name)
+  name  = cluster.replace(' ','')
+  RA    = ra[i]
+  DEC   = dec[i]
+  print ("CLUSTER:", name, RA, DEC)
   
+  if not args['size']: 
+    size = 0.4
+  else:
+    size = args['size']
 
-  if args['doextraction']:
-    #cmd = 'python /local/work/g.digennaro/software/extraction-utils/ddf-pipeline/scripts/optimise-extract-region.py --ra %s --dec %s --size 0.4 --region_file ./%s/%s.extraction.reg'%(ra[i], dec[i],name,name)
-    #print (cmd) 
-    #os.system(cmd)
-    
-    if not glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*"):
-      
+  if args['doextraction']:   
+    #if not glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*"):
+    if not glob.glob("../extracted/"+name+"*.tar.gz"):
       # this is for the final extraction  
       #cmd = 'python /local/work/g.digennaro/software/extraction-utils/extraction-utils/ddf-pipeline/scripts/run_extraction_pipeline.py %s' %name
       #print (cmd)
       #os.system(cmd)
-
-      cmd = 'python /local/work/g.digennaro/software/extraction-utils/ddf-pipeline/scripts/extraction.py %s' %name
+      cmd = 'python /iranet/groups/ulu/g.digennaro/software/extractionDR3/ddf-pipeline/scripts/extraction.py %s %s %s %s'%(name,size,RA,DEC)
       print (cmd)
       os.system(cmd)
     
     else:
       print ("Extraction already done")
      
-
   else:
     print ("No extraction requested for %s"%name)
+    if len(glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*")) == 0:
+      os.system("mv "+DATADIR+name+"/*/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive* "+DATADIR+name+"/.")
   
   if os.path.exists(DATADIR+name) and args['doselfcal'] and len(glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*")) > 0:
     if not os.path.exists(DATADIR+name+'/'+name+'.ds9.tar.gz'):      
@@ -132,11 +137,11 @@ for i, cluster in enumerate(clusterlist):
         sdb.close()
         print('Updated status to STARTED for',name)
 
-      cmd  = 'python /local/work/g.digennaro/software/extraction-utils/lofar_facet_selfcal/facetselfcal.py '
-      cmd += '--helperscriptspath="/local/work/g.digennaro/software/extraction-utils/lofar_facet_selfcal" '
-      cmd += '--helperscriptspathh5merge="/local/work/g.digennaro/software/extraction-utils/lofar_helpers" '
+      cmd  = 'python /iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_facet_selfcal/facetselfcal.py '
+      cmd += '--helperscriptspath="/iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_facet_selfcal" '
+      cmd += '--helperscriptspathh5merge="/iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_helpers" '
       cmd += '-b %s.ds9.reg '%name
-      cmd += '--remove-flagged-from-startend --auto '
+      cmd += '--auto ' #--remove-flagged-from-startend 
       if args['stopselfcal']:
         cmd += '--stop 1 ' #this is only to check for eventually bad antennas
       if args['restartselfcal']:
@@ -164,8 +169,9 @@ for i, cluster in enumerate(clusterlist):
         sdb.close()
         print('Updated status to SDONE for',name)
     
-    
-      os.chdir('/local/work/g.digennaro/LoTSS-DR3/')  
+      os.system('cp *tar* ../../extracted/.')
+      #os.system('rm -rf *')
+      os.chdir('../')
 
     else:
       print ("Selfacl already done")   
