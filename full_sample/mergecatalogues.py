@@ -205,14 +205,15 @@ for i in range(1, len(cataloglist)):
   multline = list(map(int, np.append(multline, ids+k)))
   k+=len(name)
 
-#print (multline)
-#sys.exit()
 table = Table.read('all.fits')
 table.remove_rows(multline)
 table.write(outputcatalog, overwrite=True)
 
+table = Table.read(outputcatalog)
+table['M500'].fill_value = 'N/A'
 if args.onlyclusters:
-  table = Table.read(outputcatalog)
   ids = np.where( table['M500'] >= 1. )[0]
-  newtable = table[ids]
-  newtable.write(outputcatalog, overwrite=True)
+else:
+  ids = np.where( table['M500'].filled() != 'N/A' )[0]
+newtable = table[ids]
+newtable.write(outputcatalog, overwrite=True)
