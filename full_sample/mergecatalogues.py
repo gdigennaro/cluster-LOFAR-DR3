@@ -122,8 +122,8 @@ for catalog in cataloglist:
 
 
 if not os.path.exists('all.fits'):
-  newname, newRA, newDEC, newz, newez, newM500, newRkpc, newRamin = \
-  np.array([]),  np.array([]), np.array([]),  np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
+  newname, newRA, newDEC, newz, newez, newM500, neweM500, newEM500, newRkpc, newRamin = \
+  np.array([]),  np.array([]), np.array([]),  np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
   
   for catalog in cataloglist:
     #print (catalog.replace('.fits','matched.fits'))
@@ -134,6 +134,8 @@ if not os.path.exists('all.fits'):
     z         = data['z']
     e_z       = data['e_z']
     M500      = data['M500']
+    eM500      = data['e_M500']
+    EM500      = data['E_M500']
     R500kpc   = data['R500kpc']
     R500amin  = data['R500amin']
 
@@ -143,6 +145,8 @@ if not os.path.exists('all.fits'):
     newz    = np.append(newz, z)
     newez   = np.append(newez, e_z)
     newM500 = np.append(newM500, M500)
+    neweM500 = np.append(neweM500, eM500)
+    newEM500 = np.append(newEM500, EM500)
     newRkpc = np.append(newRkpc, R500kpc)
     newRamin= np.append(newRamin, R500amin)
 
@@ -153,6 +157,8 @@ if not os.path.exists('all.fits'):
   newdata['z']           = np.array(newz, dtype=np.float64)
   newdata['e_z']         = np.array(newez, dtype=np.float64)
   newdata['M500']        = np.array(newM500, dtype=np.float64)
+  newdata['eM500']        = np.array(neweM500, dtype=np.float64)
+  newdata['EM500']        = np.array(newEM500, dtype=np.float64)
   newdata['R500kpc']     = np.array(newRkpc, dtype=np.float64)
   newdata['R500amin']    = np.array(newRamin, dtype=np.float64)
 
