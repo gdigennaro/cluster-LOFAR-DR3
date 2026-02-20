@@ -7,10 +7,10 @@ It needs to be ran inside `flocs v6.1.0` (https://public.spider.surfsara.nl/proj
 
 Examples of how to run the script, for a cluster list:
 
-`python run_extraction_and_selfcal.py -c clusterlist.fits [–-doextraction] [--doselfcal]`
+`python run_extraction_and_selfcal.py -c CLUSTERLIST.fits [–-doextraction] [--doselfcal]`
 
 and for a single cluster:
 
-`python run_extraction_and_selfcal.py -i clustername --RA clusterRA --DEC clusterDEC [--size 0.5] [–-doextraction] [--doselfcal]`
+`python run_extraction_and_selfcal.py -i CLUSTERNAME --RA CLUSTER_RA --DEC CLUSTER_DEC [--size 0.4] [–-doextraction] [--doselfcal]`
 
 Issues and fix are available at this doc: https://docs.google.com/document/d/1vPrjBnpE0didmAeQlA2b2FeRBY8AqJ5rVkOfs9CEp-g/edit?usp=sharing
