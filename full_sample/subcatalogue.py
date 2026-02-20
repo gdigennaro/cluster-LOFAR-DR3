@@ -29,34 +29,27 @@ mpl.rcParams['ytick.direction' ]= 'in'
 mpl.rcParams['errorbar.capsize'] = 3
 mpl.rcParams['legend.handlelength'] = 1.5
 
-def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
+def subcatalogues(clustercatalogue, Mcut, zcut, writecutcatalog, doplots):
   # LoTSS pointing table
   print (clustercatalogue)
   data  = fits.open(clustercatalogue)[1].data
-  noise = np.array(data['noise'])
   z     = np.array(data['z'])
   M     = np.array(data['M500'])
 
   cuts = ''
   if Mcut: cuts += 'M'+str(Mcut)
   if zcut: cuts += 'z'+str(zcut)
-  if Ncut: cuts += 's'+str(Ncut)
 
-  if cuts == 'M'+str(Mcut)+'z'+str(zcut)+'s'+str(Ncut):
-    ids = np.where( (M >= Mcut)  & (M != '') & (z >= zcut) & (noise <= Ncut) )[0] 
-  elif cuts == 'M'+str(Mcut)+'z'+str(zcut):
+  if cuts == 'M'+str(Mcut)+'z'+str(zcut):
     ids = np.where( (M >= Mcut)  & (M != '') & (z >= zcut) )[0] 
-  elif cuts == 'z'+str(zcut)+'s'+str(Ncut):
-    ids = np.where( (z >= zcut) & (noise <= Ncut) )[0]
   elif cuts == 'M'+str(Mcut):
     ids = np.where( (M >= Mcut)  & (M != '') )[0]
   elif cuts == 'z'+str(zcut):
     ids = np.where( (z >= zcut) )[0] 
-  elif cuts == 's'+str(Ncut):
-    ids = np.where( (noise <= Ncut) )[0]
-  print (Mcut, Ncut, zcut, len(ids))
 
-  if docut:
+  print (Mcut, zcut, len(ids))
+
+  if writecutcatalog:
     # write the subtable
     newclustercatalogue = clustercatalogue.replace('matched.fits','matched_'+cuts+'.fits')
     table = Table.read(clustercatalogue)
@@ -64,6 +57,7 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     newtable.write(newclustercatalogue, overwrite=True)
 
   if doplot:
+    if not os.path.exists('./images/'): os.mkdir('./images/')
     # plot cut catalog 
     name = clustercatalogue.split("matched")[0].split('./cluster_catalogues/')[1]
 
@@ -78,11 +72,7 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     ax2.tick_params(axis='both',which='both',labelsize=12,right=True, top=True)
     ax3.tick_params(axis='both',which='both',labelsize=12,right=True, top=True)
 
-    plt.suptitle(name+" clusters in LoTSS-DR3\n"+r"$M\geq%s\times10^{14}\,{\rm M_\odot}, ~ z\geq%s, ~ \sigma_{\rm rms}\leq%s\,{\rm\mu Jy\,beam^{-1}}$"%(Mcut,zcut,Ncut), fontsize=16)
-    #plt.suptitle(name+" clusters in LoTSS-DR3", fontsize=16)
-    #ax3.set_title(r"$M\geq%s\times10^{14}\,{\rm M_\odot}, ~ z\geq%s, ~ \sigma_{\rm rms}\leq%s\,{\rm\mu Jy\,beam^{-1}}$"%(Mcut,zcut,Ncut), fontsize=14)    
-    #ax3.set_title(name+" clusters in LoTSS-DR3\n"+r"$M\geq%s\times10^{14}\,{\rm M_\odot}, ~ z\geq%s, ~ \sigma_{\rm rms}\leq%s\,{\rm\mu Jy\,beam^{-1}}$"%(Mcut,zcut,Ncut), fontsize=16)
-    ax1.set_xlabel(r"redshift $[z]$", fontsize=14)
+    plt.suptitle(name+" clusters in LoTSS-DR3\n"+r"$M\geq%s\times10^{14}\,{\rm M_\odot}, ~ z\geq%s$"%(Mcut,zcut), fontsize=16)
     ax1.set_ylabel(r"cluster mass $[M_{500}~\rm (\times10^{14}~M_{\odot})]$", fontsize=14)  
     ax1.grid(color='lightgrey', linestyle=':', which='both', linewidth=0.7)
     ax2.grid(color='lightgrey', linestyle=':', which='both', linewidth=0.7)
@@ -96,8 +86,7 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     ax1.set_yscale('log')
     ax2.set_yscale('log')
 
-    plt1 = ax1.scatter(z[ids], M[ids], s=50, c=noise[ids], cmap=colmap2.mpl_colormap, vmin=62, vmax=np.max(noise[ids]), edgecolors='grey', linewidth=0.3, alpha=0.8)
-    #ax1.plot(z[ids], M[ids], 'o', color='k', alpha=0.6, label=name+" (%s clusters)"%str(len(z)))
+    ax1.plot(z[ids], M[ids], 'o', color='k', alpha=0.6, label=name+" (%s clusters)"%str(len(z)))
     
     xbins = np.arange(0,z[ids].max()+0.1, 0.1)
     ybins = 10**np.linspace(np.log10(M[ids].min()), np.log10(M[ids].max()), 20)    
@@ -119,10 +108,6 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     ax3.tick_params(axis='y',labelsize=9)
     plt.setp(ax3.get_xticklabels(), visible=False)
 
-    cbar = Colorbar(mappable=plt1, ax=ax4)
-    cbar.ax.tick_params(labelsize=10)
-    cbar.set_label(r'expected noise map $(\rm \sigma_{rms}~[\mu Jy\,beam^{-1}])$', fontsize=12)
-
     marker  = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', label="%s clusters"%str(len(z[ids])))
     ax1.legend(handles=[marker], handletextpad=0.1, prop={'size': 10}, frameon=True)
 
@@ -133,17 +118,16 @@ def subcatalogues(clustercatalogue, Mcut, Ncut, zcut):
     plt.close()
     #sys.exit()  
 
-Mcut = 4
-Ncut = 100
-zcut = 0.6
 
-DATADIR = '/iranet/groups/ulu/g.digennaro/LOFAR-DR3/cluster_catalogues/'
-if True:
-  subcatalogues(DATADIR+'ACT-DR5matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=zcut, docut=True, doplot=False) #, Mcut=6, Ncut=None, zcut=zcut) 
-  subcatalogues(DATADIR+'MCXC2matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
-  subcatalogues(DATADIR+'PSZ2matched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
-  subcatalogues(DATADIR+'eROSITA-GEmatched.fits', Mcut=Mcut, Ncut=Ncut, zcut=0.6, docut=True, doplot=False)
-  #subcatalogues('./cluster_catalogues/DESI-WHmatched.fits', Mcut, Ncut, zcut, docut=True, doplot=False)
-if False:
-  subcatalogues('./cluster_catalogues/ALLcrossmatched.fits', Mcut=5, Ncut=None, zcut=0.6, docut=True, doplot=False)
+parser = argparse.ArgumentParser(description='Run extraction and selfcalibration of clusters in LoTSS; you can give either a catalog (FITS format) or the cluster name')
+parser.add_argument('-c','--cataloglist', nargs='+', help='Catalog to use from which extract clusters; examples=ACT-DR5.fits', required=True, type=str)
+parser.add_argument('--mass_cut', help='lower limit in mass for the subsample', default=6. required=false, type=float)
+parser.add_argument('--z_cut', help='lower limit in redshift for the subsample', default=0.6 required=false, type=float)
+args = parser.parse_args()
 
+cataloglist  = args.cataloglist
+Mcut         = args.mass_cut
+zcut         = args.z_cut
+
+for catalog in cataloglist:
+  subcatalogues(cataloglist, Mcut=Mcut, zcut=zcut, writecutcatalog=True, doplot=False)
