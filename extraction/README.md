@@ -3,7 +3,9 @@ The script `run_extraction_and_selfcal.py` works both on single clusters, with c
 - the extraction, where the pointing is downloaded and sources outside a given region are subtracted. It requires a macaroon to connect to the LoTSS database (provided only by request to gabriella.digennaro@inaf.it)
 - the selfcal, performed using `facetselfcal v17.14` in auto mode (4 cycles of phase only and 6 cycles of amp+phase calibration). Possibly, you can add/decrease selfcal cycle by adding `--stop NCYCLES` to the `facetselfcal` command (see https://github.com/rvweeren/lofar_facet_selfcal/tree/main)
  
-It needs to be ran inside `flocs v6.1.0` (https://public.spider.surfsara.nl/project/lofarvwf/fsweijen/containers/)
+It needs to be ran inside `flocs v6.1.0` (https://public.spider.surfsara.nl/project/lofarvwf/fsweijen/containers/).
+
+From the run directory, it will create subfolders with the CLUSTERNAMEs.
 
 Examples of how to run the script, for a cluster list:
 
