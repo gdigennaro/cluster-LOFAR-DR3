@@ -14,6 +14,23 @@ import argparse
 from astropy.io import fits
 from astropy.table import Table
 
+def radius(M500, z, rho500=True):
+  from astropy.cosmology import FlatLambdaCDM
+  cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+  
+  rhoc = cosmo.critical_density(z)
+  M500 *= 1.e14*(2.e33) #M500 in g
+  R500 = ( (3.*M500)/(4.*np.pi* (500*rhoc.value)) )**(1./3.) #R500 in cm
+  R500kpc  = R500/3.08e21 #R500 in kpc
+  R500amin = (R500/3.08e21 / cosmo.kpc_proper_per_arcmin(z).value) #R500 in arcmin   
+
+  if rho500:
+    Rkpc = R500kpc ; Ramin = R500amin
+  else:
+    Rkpc = R500kpc/0.7 ; Ramin = R500amin/0.7
+
+  return (Rkpc, Ramin)
+
 
 def prepare_catalogues(clustercatalogue, DECmin, DECmax):  
   print (clustercatalogue, DECmin, DECmax)
@@ -25,14 +42,15 @@ def prepare_catalogues(clustercatalogue, DECmin, DECmax):
   RA        = np.array(table['RAJ2000'])
   DEC       = np.array(table['DEJ2000'])
   M500      = np.array(table['M500'])
-
-  #DECcut < 0. # cut in declination because of LoTSS pointing
+  EM500     = np.array(table['EM500'])
+  eM500     = np.array(table['eM500'])
+  
   idx = np.where( (DEC >= DECmin) & (DEC <= DECmax) )[0] 
 
   # cross match cluster list and LoTSS-DR3 pointings
   R500kpc, R500amin = [-1]*len(RA), [-1]*len(RA)
   
-  for i in idx: # LoTSS-DR3 clusters
+  for i in idx:
     if (z[i] != -1) and (M500[i] > 0.):
       R500kpc[i]     = round(radius(M500[i], z[i], rho500=True)[0])
       R500amin[i]    = round(radius(M500[i], z[i], rho500=True)[1],3)
@@ -60,22 +78,6 @@ def prepare_catalogues(clustercatalogue, DECmin, DECmax):
   newtable.write(newclustercatalogue, overwrite=True)
 
 
-def radius(M500, z, rho500=True):
-  from astropy.cosmology import FlatLambdaCDM
-  cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
-  
-  rhoc = cosmo.critical_density(z)
-  M500 *= 1.e14*(2.e33) #M500 in g
-  R500 = ( (3.*M500)/(4.*np.pi* (500*rhoc.value)) )**(1./3.) #R500 in cm
-  R500kpc  = R500/3.08e21 #R500 in kpc
-  R500amin = (R500/3.08e21 / cosmo.kpc_proper_per_arcmin(z).value) #R500 in arcmin   
-
-  if rho500:
-    Rkpc = R500kpc ; Ramin = R500amin
-  else:
-    Rkpc = R500kpc/0.7 ; Ramin = R500amin/0.7
-
-  return (Rkpc, Ramin)
 
 
 def sepn(r1,d1,r2,d2):
@@ -134,8 +136,8 @@ if not os.path.exists('all.fits'):
     z         = data['z']
     e_z       = data['e_z']
     M500      = data['M500']
-    eM500      = data['e_M500']
-    EM500      = data['E_M500']
+    eM500      = data['eM500']
+    EM500      = data['EM500']
     R500kpc   = data['R500kpc']
     R500amin  = data['R500amin']
 
