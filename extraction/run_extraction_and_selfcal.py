@@ -11,9 +11,6 @@ import pyregion
 import time
 start_time = time.time()
 
-from surveys_db import *
-from db_utils import *
-
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
@@ -21,25 +18,16 @@ from astropy import wcs
 from astropy.wcs import WCS
 from auxcodes import separator
 
-sys.path.remove('/opt/lofar/ddf-pipeline/utils')
-sys.path.insert(1, "./extractionDR3/ddf-pipeline/utils")
-sys.path.remove('/opt/lofar/lotss-hba-survey')
-sys.path.insert(1, "./extractionDR3/lotss-hba-survey")
-sys.path.remove('/opt/lofar/ddf-pipeline/scripts')
-sys.path.insert(1, ".
-/extractionDR3/ddf-pipeline/scripts")
+rclone = os.environ['RCLONE_CONFIG_DIR'] = './'
 
-rclone = os.environ['RCLONE_CONFIG_DIR'] = '/iranet/groups/ulu/g.digennaro/software/'
-#print (rclone) ; sys.exit()
 from reprocessing_utils import *
 
 """
 Script to run extraction and automatic selfcal from LoTSS poining.
 
-to run inside latest flocs (type flocs-setup, see bash_aliases)
+to run inside flocs v6.1.0
 """
 
-#DATADIR = '/local/work/g.digennaro/LoTSS-DR3/'
 DATADIR = './'
 
 def upload_extract(cname,uploadfilename):
@@ -51,18 +39,13 @@ def upload_extract(cname,uploadfilename):
 parser = argparse.ArgumentParser(description='Run extraction and selfcalibration of clusters in LoTSS; you can give either a catalog (FITS format) or the cluster name')
 parser.add_argument('--doextraction', help='set it True if you want to extract clusters from archive', action='store_true')
 parser.add_argument('--doselfcal', help='set it True if you want to run facetselfcal', action='store_true')
-parser.add_argument('--stopselfcal', help='set it True if you want to stop the selfcal to cycle 0', action='store_true')
-parser.add_argument('--restartselfcal', help='set it True if you want to stop the selfcal to cycle 0', action='store_true')
-parser.add_argument('--docopy', help='set it True if you want to copy the selfcal output on Surfsara', action='store_true')
 parser.add_argument('-i','--clustername', help='cluster name, if you want to extract a single cluster', default='', required=False, type=str)
 parser.add_argument('--RA', help='cluster RA (in deg)', required=False, type=float)
 parser.add_argument('--DEC', help='cluster DEC (in deg)', required=False, type=float)
-#parser.add_argument('--docatalog', help='set it True if you want to run the script for a catalog of clusters', action='store_true')
 parser.add_argument('--size', help='size of box region (in deg)', default=0.4, required=False, type=float)
 parser.add_argument('-c','--catalog', help='Catalog to use from which extract clusters', required=False, type=str)
 
 args = vars(parser.parse_args())
-
 
 if args['catalog'] and args['clustername']:
   print ("Error: either give a single target name or a cluster catalog")
@@ -97,16 +80,10 @@ for i, cluster in enumerate(clusterlist):
     size = args['size']
 
   if args['doextraction']:   
-    #if not glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*"):
-    if not glob.glob("../extracted/"+name+"*.tar.gz"):
-      # this is for the final extraction  
-      #cmd = 'python /local/work/g.digennaro/software/extraction-utils/extraction-utils/ddf-pipeline/scripts/run_extraction_pipeline.py %s' %name
-      #print (cmd)
-      #os.system(cmd)
-      cmd = 'python /iranet/groups/ulu/g.digennaro/software/extractionDR3/ddf-pipeline/scripts/extraction.py %s %s %s %s'%(name,size,RA,DEC)
+    if len(glob.glob(DATADIR+name+"/"+"P???+??*.dysco.sub.shift.avg.weights.ms.archive*")) == 0:
+      cmd = 'python extraction.py %s %s %s %s'%(name,size,RA,DEC)
       print (cmd)
       os.system(cmd)
-    
     else:
       print ("Extraction already done")
      
@@ -122,55 +99,14 @@ for i, cluster in enumerate(clusterlist):
       os.chdir(CLUSTERDIR)
       print (os.getcwd())
       
-      # this is for the final selfcal  -- maybe not
-      #cmd = 'python /local/work/g.digennaro/software/extraction-utils/extraction-utils/ddf-pipeline/scripts/run_selfcal_pipeline.py %s' %( str(name) )
-      #print (cmd)
-      #os.system(cmd)
-
-      if False: # if args['docopy']:
-        # update the database to give success
-        selfcal_status = 'STARTED'
-        sdb=SurveysDB()
-        extractdict = sdb.get_reprocessing(name)
-        extractdict['selfcal_status'] = selfcal_status
-        sdb.db_set('reprocessing',extractdict)
-        sdb.close()
-        print('Updated status to STARTED for',name)
-
-      cmd  = 'python /iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_facet_selfcal/facetselfcal.py '
-      cmd += '--helperscriptspath="/iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_facet_selfcal" '
-      cmd += '--helperscriptspathh5merge="/iranet/groups/ulu/g.digennaro/software/extractionDR3/lofar_helpers" '
+      cmd  = 'python facetselfcal '
       cmd += '-b %s.ds9.reg '%name
-      cmd += '--auto ' #--remove-flagged-from-startend 
-      if args['stopselfcal']:
-        cmd += '--stop 1 ' #this is only to check for eventually bad antennas
-      if args['restartselfcal']:
-        cmd += '--start 0 --stop 10' #this is to restart the selfcal process (after checking the bad antennas)      
+      cmd += '--auto '  
       cmd += '-i %s *dysco.sub.shift.avg.weights.ms.archive?'%name
       
       print (cmd)
       os.system(cmd)
-
-
-      # copy to SURF
-      if args['docopy']:
-        print('Archiving the results to SURF')
-        f = glob.glob('%s.ds9.tar.gz'%name) + glob.glob('%s_009.png'%name)
-
-        for uploadfilename in f:
-          upload_extract(name,uploadfilename)
-        
-        # update the database to give success
-        selfcal_status = 'SDONE'
-        sdb=SurveysDB()
-        extractdict = sdb.get_reprocessing(name)
-        extractdict['selfcal_status'] = selfcal_status
-        sdb.db_set('reprocessing',extractdict)
-        sdb.close()
-        print('Updated status to SDONE for',name)
     
-      os.system('cp *tar* ../../extracted/.')
-      #os.system('rm -rf *')
       os.chdir('../')
 
     else:
