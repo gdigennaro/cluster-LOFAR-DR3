@@ -152,7 +152,7 @@ def match_LoTSSpointingID_to_catalogue(clustercatalogues, pointinglist ,dcoord=2
 
 parser = argparse.ArgumentParser(description='Run extraction and selfcalibration of clusters in LoTSS; you can give either a catalog (FITS format) or the cluster name')
 parser.add_argument('-c','--cataloglist', nargs='+', help='Catalog to use from which extract clusters; examples=ACT-DR5.fits', required=True, type=str)
-parser.add_argument('--DEClims', nargs=2, help='limits in declination', default=0 90, required=False, type=int)
+parser.add_argument('--DEClims', nargs=2, help='limits in declination', required=True, type=int)
 parser.add_argument('--pointinglist', help='Catalog to use from which extract clusters', default='fieldsdict.fits', required=False, type=str)
 args = parser.parse_args()
 
